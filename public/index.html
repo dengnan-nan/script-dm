@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>剧本杀线上中控平台</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+<div id="screen-entry" class="screen">
+  <div class="entry-card">
+    <div class="brand">
+      <div class="brand-logo">🎭</div>
+      <div>
+        <h1>剧本杀 · 线上中控平台</h1>
+        <p class="muted">AutoDM 机器人主控 · 玩家线索托盘 · 链接即房间</p>
+      </div>
+    </div>
+    <div class="entry-block pick-block">
+      <label>第 1 步 · 选一个本</label>
+      <p class="muted small">不选就用内置《雨夜旧屋》。上传的 Word / 整个文件夹会先解析成「角色 + 分幕 + 线索」再开局。</p>
+      <div class="pick-tabs">
+        <button class="pick-tab active" data-tab="file">我的文件</button>
+        <button class="pick-tab" data-tab="lib">剧本库</button>
+        <button class="pick-tab" data-tab="gen">自动生成</button>
+        <button class="pick-tab" data-tab="text">粘贴 / 链接</button>
+      </div>
+
+      <div id="tab-file" class="pick-pane">
+        <div class="drop-zone" id="drop-zone">
+          <b>拖一个 Word / TXT / MD 或整个文件夹到这里</b>
+          <em>真正的 .docx、老版 .doc（WPS 存的）、纯文本都能读；扩展名不对也会按文件内容识别</em>
+          <div class="btn-row">
+            <button class="btn ghost sm" id="btn-pick-file">选文件</button>
+            <button class="btn ghost sm" id="btn-pick-folder">选整个文件夹</button>
+          </div>
+          <input type="file" id="inp-files" class="hidden" multiple accept=".docx,.doc,.wps,.txt,.md,.csv,.json" />
+          <input type="file" id="inp-folder" class="hidden" webkitdirectory multiple />
+        </div>
+        <details class="format-hint">
+          <summary>剧本怎么写，系统才读得全？（点开展开模板）</summary>
+          <div class="format-body">
+            <p>下面这个结构写清楚，角色、秘密、任务、分幕、线索、真凶就能一次读全；写不齐也能跑，但会在预览里用黄色提示哪里没认出来。</p>
+            <pre>《书名》
+人数：6
+真凶：周诚
+
+## 角色
+### 角色 1｜沈知予
+【公开人设】一句话身份 + 性格（选角时别人只看到这句）
+【你的故事线】你是谁、为什么今晚在场，3~6 句
+【你今晚的时间线】
+19:00 你做了什么
+20:00 你做了什么（别人问到要对得上）
+【你的秘密，不要主动说】不想让别人知道的事
+【随身物品】身上带着的东西
+【个人任务】
+1. 第一条任务
+2. 第二条
+
+## 第一幕：雨夜回响
+【主持人宣读幕启】这一幕开场要念的话
+【玩家读本】这一幕的公开剧情
+线索 1：307 寝室
+线索的具体内容…</pre>
+            <p class="muted small">小提示：角色写成「角色 1｜名字」「玩家 A｜名字」都行；线索写成「线索 1：标题」下一行接正文；真凶写一句「真凶：XXX」。选角阶段玩家只看到一句话人设，开本后才会收到完整的秘密和任务。</p>
+          </div>
+        </details>
+        <div id="parse-status" class="parse-status"></div>
+      </div>
+
+      <div id="tab-lib" class="pick-pane hidden">
+        <div id="lib-list" class="lib-list"></div>
+      </div>
+
+      <div id="tab-gen" class="pick-pane hidden">
+        <p class="muted small">告诉我这一车几个人、想要什么风格，我直接写一本完整的：每人有身份、性格、和死者的关系、藏在心里的事，三幕剧情 + 公开线索 + 私人线索 + 复盘。</p>
+        <div class="gen-row">
+          <label class="gen-field">
+            <span>参加人数</span>
+            <input id="inp-gen-count" type="number" min="3" max="8" value="4" />
+          </label>
+          <label class="gen-field">
+            <span>想要的风格</span>
+            <select id="sel-gen-style" class="select"></select>
+          </label>
+        </div>
+        <input id="inp-gen-title" placeholder="书名（可留空，自动取）" autocomplete="off" />
+        <div class="btn-row"><button class="btn primary sm" id="btn-generate">自动生成这个本</button></div>
+        <div id="gen-ai-hint" class="muted small"></div>
+        <div id="gen-status" class="parse-status"></div>
+      </div>
+
+      <div id="tab-text" class="pick-pane hidden">
+        <textarea id="inp-paste" rows="7" placeholder="把剧本文字粘贴到这里。最稳的写法：先写《书名》和「真凶：XX」，然后每个角色一段（「角色 1｜名字」+ 【公开人设】/【你的秘密】/【个人任务】），再按「第一幕：…」分幕，线索写「线索 1：标题」换行接正文。"></textarea>
+        <div class="btn-row"><button class="btn ghost sm" id="btn-parse-paste">解析这段文字</button></div>
+        <input id="inp-url" placeholder="或贴一个网页链接（能抓到正文就能解析）" />
+        <div class="btn-row"><button class="btn ghost sm" id="btn-parse-url">从链接导入</button></div>
+        <p class="muted small">选角阶段只展示一句话人设，开本后系统才会把每个人的秘密、任务、随身物品发到对应玩家托盘。</p>
+      </div>
+
+      <div id="script-preview" class="script-preview hidden"></div>
+    </div>
+
+    <div class="entry-block">
+      <label>第 2 步 · 房间号（留空则新建）</label>
+      <input id="inp-room" placeholder="例如：R4F9K" autocomplete="off" />
+      <div class="row-between">
+        <span class="muted small">扫别人的二维码进房时，房间号会自动填好</span>
+        <button class="btn ghost sm" id="btn-new-room">新建房间</button>
+      </div>
+    </div>
+    <div class="entry-block">
+      <label>你的昵称</label>
+      <input id="inp-name" placeholder="例如：阿楠 / DM-小周" autocomplete="off" />
+    </div>
+    <div class="entry-actions">
+      <label class="check-line">
+        <input type="checkbox" id="chk-dm-play" />
+        <span><b>DM 同时以玩家身份参与</b>
+          <em>勾选：开本后你也拿角色剧本、收线索、能投票；不勾：全职中控</em></span>
+      </label>
+      <button class="btn primary big" id="btn-enter-dm">以中控 DM 进入</button>
+      <button class="btn big" id="btn-enter-player">以玩家进入</button>
+    </div>
+    <div class="entry-tip">
+      <span class="dot"></span> 一个窗口开中控，另外开 2~3 个窗口用不同昵称当玩家，即可联机跑一局。
+    </div>
+
+    <div class="how-card">
+      <h2 class="how-title">第一次用？一分钟就懂</h2>
+      <p class="how-sub">同一个故事，每个人只知道其中一部分</p>
+      <div class="how-strip">
+        <div class="how-step"><span class="how-num">1</span><b>开房间</b><em>中控点「新建房间」，拿到房间号</em></div>
+        <div class="how-step"><span class="how-num">2</span><b>拉人进来</b><em>发链接或二维码，大家填昵称进房</em></div>
+        <div class="how-step"><span class="how-num">3</span><b>各自选角</b><em>每人拿到自己的人设与秘密</em></div>
+        <div class="how-step"><span class="how-num">4</span><b>中控推剧情</b><em>推幕、发线索、主持投凶、放复盘</em></div>
+      </div>
+      <p class="how-note">线索会说话，真相藏在细节里。你们不是旁观者，是故事里的人。</p>
+    </div>
+  </div>
+</div>
+<div id="screen-dm" class="screen hidden">
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="logo-mini">🎭</span>
+      <span class="room-tag" id="dm-room-tag">—</span>
+      <span class="badge" id="dm-mode-badge">AutoDM</span>
+      <span class="badge badge-soft" id="dm-act-badge">未开本</span>
+    </div>
+    <div class="topbar-right">
+      <div class="view-tabs" id="dm-view-tabs">
+        <button class="tab active" data-view="dm">中控台</button>
+        <button class="tab" data-view="player">我的角色</button>
+      </div>
+      <button class="btn sm" id="btn-qr">邀请二维码</button>
+      <button class="btn ghost sm" id="btn-copy-dm-link">复制链接</button>
+      <button class="btn ghost sm" id="btn-exit-dm">退出</button>
+    </div>
+  </header>
+
+  <main class="dm-board">
+    <section class="auto-bar hidden" id="auto-bar">
+      <div class="auto-bar-main">
+        <span class="auto-bar-tag">AutoDM</span>
+        <span class="auto-bar-label" id="auto-label">下一步</span>
+        <span class="auto-clock" id="auto-clock">--:--</span>
+      </div>
+      <div class="auto-track"><div class="auto-fill" id="auto-fill"></div></div>
+    </section>
+
+    <section class="guide-bar">
+      <div class="guide-ico">📣</div>
+      <div class="guide-text">
+        <b id="guide-title">系统提示</b>
+        <span id="guide-desc">正在读取房间状态…</span>
+      </div>
+      <button class="btn primary guide-btn" id="guide-btn">开始</button>
+    </section>
+
+    <div class="zone-grid">
+      <section class="zone zone-act">
+        <h2 class="zone-title"><span class="zone-num">1</span>剧情推进</h2>
+        <p class="zone-sub">点「推送本幕」，这一段的公开剧本会同时发给所有玩家。</p>
+        <div id="dm-timeline" class="timeline"></div>
+      </section>
+
+      <section class="zone zone-clue">
+        <h2 class="zone-title"><span class="zone-num">2</span>线索发放</h2>
+        <p class="zone-sub">按一下，这一幕所有还没发的线索会同时进入对应玩家的托盘。不用逐条点。</p>
+        <div id="dm-clues" class="clue-once">
+          <button class="btn primary big" id="btn-give-all">一键发放本幕线索</button>
+          <div id="dm-clue-status" class="clue-status">先推送第一幕，线索才会准备好。</div>
+        </div>
+      </section>
+
+      <section class="zone zone-cast">
+        <h2 class="zone-title"><span class="zone-num">3</span>角色席位</h2>
+        <p class="zone-sub">玩家自己选角，这里能看到谁还没选。</p>
+        <div id="dm-players" class="player-list"></div>
+        <div id="dm-my-role-box" class="hidden">
+          <div class="zone-divider">我参与的角色</div>
+          <select id="dm-role-select" class="select"></select>
+        </div>
+        <div class="zone-divider">主控模式</div>
+        <div class="mode-switch">
+          <label class="mode-opt">
+            <input type="radio" name="masterMode" value="auto" checked />
+            <span><b>🤖 AutoDM</b><em>机器人按时间轴自动推进</em></span>
+          </label>
+          <label class="mode-opt">
+            <input type="radio" name="masterMode" value="human" />
+            <span><b>👤 人工介入</b><em>暂停机器人，你手动控场</em></span>
+          </label>
+        </div>
+        <div class="zone-divider">机器人的时间间隔（分钟）</div>
+        <div class="timing-grid">
+          <label class="timing-field"><span>推幕后多久发线索</span><input id="tm-clueDelay" type="number" min="0.5" max="60" step="0.5" value="10" /></label>
+          <label class="timing-field"><span>两条线索之间</span><input id="tm-clueGap" type="number" min="0.5" max="60" step="0.5" value="4" /></label>
+          <label class="timing-field"><span>每一幕间隔</span><input id="tm-actGap" type="number" min="1" max="120" step="0.5" value="30" /></label>
+          <label class="timing-field"><span>最后一幕到投票</span><input id="tm-voteDelay" type="number" min="1" max="120" step="0.5" value="10" /></label>
+        </div>
+        <div class="btn-row">
+          <button class="btn ghost sm" id="btn-save-timing">保存节奏</button>
+          <span class="muted small" id="timing-hint">改完从下一幕起生效</span>
+        </div>
+      </section>
+
+      <section class="zone zone-vote">
+        <h2 class="zone-title"><span class="zone-num">4</span>投票与结算</h2>
+        <p class="zone-sub">全员投完就结算，随即可以公布复盘。</p>
+        <div id="dm-votes" class="vote-progress"></div>
+        <div class="btn-row">
+          <button class="btn" id="btn-open-vote">开启投凶</button>
+          <button class="btn" id="btn-close-vote">结算投票</button>
+          <button class="btn" id="btn-reveal">放出复盘</button>
+        </div>
+      </section>
+
+      <section class="zone zone-help">
+        <h2 class="zone-title"><span class="zone-num">5</span>扶车与备注</h2>
+        <p class="zone-sub">给玩家的提示里不会写凶手是谁。内容默认模糊遮住，你自己确认后再点「发送」。</p>
+        <div id="dm-hints" class="hint-cards"></div>
+        <div class="zone-divider">DM 私有备注（只有你能看到）</div>
+        <div class="note-box" id="dm-note"></div>
+      </section>
+
+      <section class="zone zone-tray">
+        <h2 class="zone-title"><span class="zone-num">6</span>托盘巡查</h2>
+        <p class="zone-sub">看玩家把线索摆成了什么样，随时点开读全文。</p>
+        <select id="dm-tray-select" class="select"></select>
+        <div class="mini-tray" id="dm-mini-tray"></div>
+        <div class="zone-divider">操作日志</div>
+        <div id="dm-notices" class="notice-list"></div>
+      </section>
+    </div>
+  </main>
+</div>
+<div id="screen-player" class="screen hidden">
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="logo-mini">🎭</span>
+      <span class="room-tag" id="pl-room-tag">—</span>
+      <span class="badge" id="pl-role-badge">未选角色</span>
+      <span class="badge badge-soft" id="pl-act-badge">等待开本</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn sm hidden" id="btn-back-dm">返回中控台</button>
+      <button class="btn ghost sm" id="btn-exit-player">退出</button>
+    </div>
+  </header>
+
+  <section class="auto-bar player hidden" id="pl-auto-bar">
+    <div class="auto-bar-main">
+      <span class="auto-bar-tag">机器人</span>
+      <span class="auto-bar-label" id="pl-auto-label">下一步</span>
+      <span class="auto-clock" id="pl-auto-clock">--:--</span>
+    </div>
+    <div class="auto-track"><div class="auto-fill" id="pl-auto-fill"></div></div>
+  </section>
+
+  <div class="hud-strip">
+    <div class="hud-item"><span class="hud-ico">🎭</span><b>角色</b><span id="hud-role" class="hud-val">未选</span></div>
+    <div class="hud-item"><span class="hud-ico">📜</span><b>进度</b><span id="hud-act" class="hud-val">等待开本</span></div>
+    <div class="hud-item"><span class="hud-ico">🗂</span><b>纸条</b><span id="hud-items" class="hud-val">0 张</span></div>
+    <div class="hud-item"><span class="hud-ico">🔍</span><b>线索</b><span id="hud-clues" class="hud-val">0 条</span></div>
+  </div>
+
+  <div id="player-lobby" class="lobby">
+    <div class="lobby-head">
+      <h2>等待开本</h2>
+      <p class="muted" id="lobby-desc">选择一个角色。选角阶段只展示人设，开本后才会下发完整剧本。</p>
+    </div>
+    <div id="role-cards" class="role-grid"></div>
+  </div>
+
+  <div id="player-game" class="hidden">
+    <div class="tray-head">
+      <div>
+        <h2>我的线索托盘</h2>
+        <p class="muted small">每拿到一段剧本、一张线索都会自动摆到托盘上。可拖动随意排列，点「放大」独立阅读全文。</p>
+      </div>
+      <div class="tray-tools">
+        <button class="btn ghost sm" id="btn-arrange">系统整理</button>
+        <button class="btn ghost sm" id="btn-tasks">任务卡</button>
+      </div>
+    </div>
+
+    <div class="tray-wrap">
+      <div id="tray-layer" class="tray-layer"></div>
+    </div>
+
+    <div id="vote-panel" class="vote-panel hidden">
+      <h3>投凶</h3>
+      <div id="vote-options" class="vote-options"></div>
+      <button class="btn primary" id="btn-submit-vote">提交投票</button>
+    </div>
+
+    <div class="player-foot">
+      <div id="pl-notices" class="notice-strip"></div>
+    </div>
+  </div>
+</div>
+
+<div id="popup" class="overlay hidden">
+  <div class="popup-card">
+    <div class="popup-icon" id="popup-icon">📖</div>
+    <h3 id="popup-title">提示</h3>
+    <div class="popup-body" id="popup-body"></div>
+    <div class="popup-hint" id="popup-hint"></div>
+    <div class="popup-actions">
+      <button class="btn ghost" id="btn-popup-close">知道了</button>
+      <button class="btn primary" id="btn-popup-tray">去托盘查看</button>
+    </div>
+  </div>
+</div>
+
+<div id="zoom" class="overlay hidden">
+  <div class="zoom-card">
+    <div class="zoom-head">
+      <h3 id="zoom-title">线索</h3>
+      <div class="zoom-tools">
+        <button class="btn ghost sm" data-zoom="minus">A−</button>
+        <button class="btn ghost sm" data-zoom="plus">A+</button>
+        <button class="btn ghost sm" id="btn-zoom-close">关闭</button>
+      </div>
+    </div>
+    <div class="zoom-body" id="zoom-body"></div>
+    <div class="zoom-foot" id="zoom-foot"></div>
+  </div>
+</div>
+
+<div id="qr-modal" class="overlay hidden">
+  <div class="qr-card">
+    <div class="qr-head">
+      <div>
+        <h3>扫码加入房间</h3>
+        <p class="muted small">手机与这台电脑连同一个 WiFi，用相机或微信扫下面二维码</p>
+      </div>
+      <button class="btn ghost sm" id="btn-qr-close">关闭</button>
+    </div>
+    <div class="qr-body">
+      <img id="qr-img" class="qr-img" alt="房间二维码" />
+      <div class="qr-side">
+        <div class="qr-room">房间号 <b id="qr-code">—</b></div>
+        <div class="qr-label">局域网地址（手机扫码后访问这个）</div>
+        <div id="qr-addrs" class="qr-addrs"></div>
+        <div class="qr-label">本机地址</div>
+        <div class="qr-addrs"><span class="addr">http://127.0.0.1:3000</span></div>
+        <div class="qr-label">跨网络联机（对方不在同一 WiFi）</div>
+        <div class="qr-wan">
+          <button class="btn sm" id="btn-tunnel">开启公网通道</button>
+          <div id="qr-wan-url" class="qr-addrs"></div>
+        </div>
+        <div class="qr-tip">扫不开？检查 Windows 防火墙是否放行了 Node，或让手机与电脑连同一网段。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/client.js"></script>
+</body>
+</html>

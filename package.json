@@ -1,0 +1,14 @@
+{
+  "name": "script-dm-platform",
+  "version": "1.0.0",
+  "description": "剧本杀线上中控平台：AutoDM 机器人主控 + 人工介入 + 玩家线索托盘",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "localtunnel": "^2.0.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  }
+}

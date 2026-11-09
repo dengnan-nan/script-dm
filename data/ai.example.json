@@ -1,0 +1,7 @@
+{
+  "_说明": "把下面三项填成你自己的，另存为 ai.json（同目录）就会自动切成 AI 现写剧本；不填也能用，走模板生成。",
+  "provider": "ark",
+  "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+  "model": "doubao-seed-2-1-pro",
+  "apiKey": "在这里填你的 API Key"
+}

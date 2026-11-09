@@ -1,0 +1,8 @@
+﻿node_modules/
+data/*.log
+data/*.pid
+rooms.json
+data/imported.json
+.DS_Store
+Thumbs.db
+*.local
